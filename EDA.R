@@ -3,9 +3,10 @@ all_data = read.csv("data_for_daniel.csv", header = TRUE)
 data = all_data[,c(1,2,3,9,14,20)]
 install.packages("lubridate")
 library(lubridate)
+library(ggplot2)
+library(tidyr)
 ## Check lubridate is working
 dmy(data$Date[1])
-library(ggplot2)
 ## Find the NA values in the data and remove
 which(is.na(data))
 data[which(is.na(data)),]
@@ -26,23 +27,23 @@ data$Date = dmy(data$Date)
 level_order = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
 ggplot(data = data) + 
   geom_boxplot(mapping = aes(x = factor(Day, level = level_order), y = NO_CWV)) +
-  xlab("") + ylab("CWV Albermarle")
+  xlab("")
 ggplot(data = data) + 
   geom_boxplot(mapping = aes(x = factor(Day, level = level_order), y = NE_CWV))+
-  xlab("") + ylab("CWV Nottingham Watnall")
+  xlab("")
 ggplot(data = data) + 
   geom_boxplot(mapping = aes(x = factor(Day, level = level_order), y = NO_DM)) + 
-  xlab("") + ylab("DM Albermarle")
+  xlab("")
 ggplot(data = data) + 
   geom_boxplot(mapping = aes(x = factor(Day, level = level_order), y = NE_DM)) + 
-  xlab("") + ylab("DM Nottingham Watnall")
+  xlab("")
 
 ## Create scatter plots of relationships within variables (CWV and DM)
-ggplot(data = data) + geom_point(mapping = aes(x = NO_CWV, y = NE_CWV))
-ggplot(data = data) + geom_point(mapping = aes(x = NO_DM, y = NE_DM))
+ggplot(data = data) + geom_point(mapping = aes(x = NO_CWV, y = NE_CWV), size = 0.5)
+ggplot(data = data) + geom_point(mapping = aes(x = NO_DM, y = NE_DM), size = 0.5)
 ## Now within locations (NO and NE)
-ggplot(data = data) + geom_point(mapping = aes(x = NO_CWV, y = NO_DM))
-ggplot(data = data) + geom_point(mapping = aes(x = NE_CWV, y = NE_DM))
+ggplot(data = data) + geom_point(mapping = aes(x = NO_CWV, y = NO_DM), size = 0.5)
+ggplot(data = data) + geom_point(mapping = aes(x = NE_CWV, y = NE_DM), size = 0.5)
 
 ## Create some line plots of the data
 ggplot(data = data, mapping = aes(x = Date, y = NO_CWV)) + geom_line()
@@ -60,18 +61,73 @@ bank_hols_data = match_df(data, bank_holidays)
 data = join(data, bank_holidays, by = "Date")
 data$Holiday = NULL
 data$Type = NULL
-library(tidyr)
 data$Bank.Holiday = replace_na(data$Bank.Holiday,"FALSE")
 
 ## Now can plot the bank holidays against other days
 ggplot(data = data) + geom_point(mapping = aes(x = NO_CWV, y = NE_CWV, colour = factor(Bank.Holiday)))
-ggplot(data = data) + geom_point(mapping = aes(x = NO_DM, y = NE_DM, colour = factor(Bank.Holiday)))
-ggplot(data = data) + geom_point(mapping = aes(x = NO_CWV, y = NO_DM, colour = factor(Bank.Holiday)))
-ggplot(data = data) + geom_point(mapping = aes(x = NE_CWV, y = NE_DM, colour = factor(Bank.Holiday)))
+ggplot(data = data) + 
+  geom_point(mapping = aes(x = NO_DM, y = NE_DM, colour = factor(Bank.Holiday)), size = 0.4) + 
+  scale_colour_discrete(limits = c("FALSE", "TRUE"), labels = c("Non-bank holiday", "Bank holiday"),
+                        type = c("skyblue", "black")) + 
+  theme(legend.title = element_blank(), legend.position = "bottom")
+ggplot(data = data) + 
+  geom_point(mapping = aes(x = NO_CWV, y = NO_DM, colour = factor(Bank.Holiday)), size = 0.4) + 
+  scale_colour_discrete(limits = c("FALSE", "TRUE"), labels = c("Non-bank holiday", "Bank holiday"),
+                        type = c("skyblue", "black")) + 
+  theme(legend.title = element_blank(), legend.position = "bottom")
+ggplot(data = data) + 
+  geom_point(mapping = aes(x = NE_CWV, y = NE_DM, colour = factor(Bank.Holiday)), size = 0.4) + 
+  scale_colour_discrete(limits = c("FALSE", "TRUE"), labels = c("Non-bank holiday", "Bank holiday"),
+                        type = c("skyblue", "black")) + 
+  theme(legend.title = element_blank(), legend.position = "bottom")
 
-## Look at more ways to represent the differences (if any) with bank holidays
-ggplot(data = data, mapping = aes(x = Date, y = NO_CWV, colour = factor(Bank.Holiday))) + geom_line()
+## Line plots which separate bank holidays and non-bank holidays
+ggplot(data = data, mapping = aes(x = Date, y = NO_DM, colour = factor(Bank.Holiday))) + 
+  geom_line() + scale_colour_discrete(limits = c("FALSE", "TRUE"), labels = c("Non-bank holiday", "Bank holiday"),
+                                      type = c("skyblue", "black")) + 
+  theme(legend.title = element_blank(), legend.position = "bottom")
+ggplot(data = data, mapping = aes(x = Date, y = NE_DM, colour = factor(Bank.Holiday))) + 
+  geom_line() + scale_colour_discrete(limits = c("FALSE", "TRUE"), labels = c("Non-bank holiday", "Bank holiday"),
+                                      type = c("skyblue", "black")) + 
+  theme(legend.title = element_blank(), legend.position = "bottom")
 
+## Box plots separating the bank holidays and non bank holidays
+ggplot(data = data) + 
+  geom_boxplot(mapping = aes(x = Bank.Holiday, y = NO_CWV), fill = c("skyblue", "darkgrey")) + xlab("") +  
+  scale_x_discrete(labels = c("FALSE" = "Non-bank holiday", "TRUE" = "Bank holiday"))
+ggplot(data = data) + 
+  geom_boxplot(mapping = aes(x = Bank.Holiday, y = NE_CWV), fill = c("skyblue", "darkgrey")) + xlab("") + 
+  scale_x_discrete(labels = c("FALSE" = "Non-bank holiday", "TRUE" = "Bank holiday"))
+
+ggplot(data = data) + geom_boxplot(mapping = aes(x = Bank.Holiday, y = NO_DM),
+                                   fill = c("skyblue", "darkgrey")) + xlab("") +
+  scale_x_discrete(labels = c("FALSE" = "Non-bank holiday", "TRUE" = "Bank holiday"))
+ggplot(data = data) + geom_boxplot(mapping = aes(x = Bank.Holiday, y = NE_DM),
+                                   fill = c("skyblue", "darkgrey")) + xlab("") + 
+  scale_x_discrete(labels = c("FALSE" = "Non-bank holiday", "TRUE" = "Bank holiday"))
+
+
+bank_hols_vector = which(data$Bank.Holiday == "TRUE")
+weekends_vector = sort(c(which(data$Day == "Saturday"), which(data$Day == "Sunday")))
+data$day_type = NA
+data$day_type[bank_hols_vector] = "Bank holiday"
+data$day_type[weekends_vector] = "Weekend"
+data$day_type = replace_na(data$day_type, "Week day")
+
+## Now can separate into week days, weekends and bank holidays
+ggplot(data = data) + geom_boxplot(mapping = aes(x = day_type, y = NO_DM),
+                                   fill = c("darkgrey", "gold", "darkorange")) + xlab("")
+ggplot(data = data) + geom_boxplot(mapping = aes(x = day_type, y = NE_DM),
+                                   fill = c("darkgrey", "gold", "darkorange")) + xlab("")
+
+ggplot(data = data, mapping = aes(x = Date, y = NO_DM, colour = factor(day_type))) + 
+  geom_line() + scale_colour_discrete(limits = c("Bank holiday", "Week day", "Weekend"),
+                                      type = c("black", "gold", "darkorange")) + 
+  theme(legend.title = element_blank(), legend.position = "bottom")
+ggplot(data = data, mapping = aes(x = Date, y = NE_DM, colour = factor(day_type))) + 
+  geom_line() + scale_colour_discrete(limits = c("Bank holiday", "Week day", "Weekend"),
+                                      type = c("black", "gold", "darkorange")) + 
+  theme(legend.title = element_blank(), legend.position = "bottom")
 
 
 
