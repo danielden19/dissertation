@@ -129,7 +129,76 @@ ggplot(data = data, mapping = aes(x = Date, y = NE_DM, colour = factor(day_type)
                                       type = c("black", "gold", "darkorange")) + 
   theme(legend.title = element_blank(), legend.position = "bottom")
 
+## Look at correlation coefficients
+cor(data$NO_CWV, data$NO_DM)
+cor(data$NO_CWV, data$NO_DM, method = "kendall")
+cor(data$NO_CWV, data$NO_DM, method = "spearman")
+cor(data$NE_CWV, data$NE_DM)
+cor(data$NE_CWV, data$NE_DM, method = "kendall")
+cor(data$NE_CWV, data$NE_DM, method = "spearman")
+cor(data$NO_DM, data$NE_DM)
+cor(data$NO_DM, data$NE_DM, method = "kendall")
+cor(data$NO_DM, data$NE_DM, method = "spearman")
 
+## More correlations based on "day type"
+cor(data$NO_DM[which(data$day_type == "Bank holiday")], 
+    data$NE_DM[which(data$day_type == "Bank holiday")])
+cor(data$NO_DM[which(data$day_type == "Bank holiday")], 
+    data$NE_DM[which(data$day_type == "Bank holiday")], method = "kendall")
+cor(data$NO_DM[which(data$day_type == "Bank holiday")], 
+    data$NE_DM[which(data$day_type == "Bank holiday")], method = "spearman")
+cor(data$NO_DM[which(data$day_type == "Week day")], 
+    data$NE_DM[which(data$day_type == "Week day")])
+cor(data$NO_DM[which(data$day_type == "Week day")], 
+    data$NE_DM[which(data$day_type == "Week day")], method = "kendall")
+cor(data$NO_DM[which(data$day_type == "Week day")], 
+    data$NE_DM[which(data$day_type == "Week day")], method = "spearman")
+cor(data$NO_DM[which(data$day_type == "Weekend")], 
+    data$NE_DM[which(data$day_type == "Weekend")])
+cor(data$NO_DM[which(data$day_type == "Weekend")], 
+    data$NE_DM[which(data$day_type == "Weekend")], method = "kendall")
+cor(data$NO_DM[which(data$day_type == "Weekend")], 
+    data$NE_DM[which(data$day_type == "Weekend")], method = "spearman")
+
+## Correlations of "day type" for the North
+cor(data$NO_CWV[which(data$day_type == "Bank holiday")], 
+    data$NO_DM[which(data$day_type == "Bank holiday")])
+cor(data$NO_CWV[which(data$day_type == "Bank holiday")], 
+    data$NO_DM[which(data$day_type == "Bank holiday")], method = "kendall")
+cor(data$NO_CWV[which(data$day_type == "Bank holiday")], 
+    data$NO_DM[which(data$day_type == "Bank holiday")], method = "spearman")
+cor(data$NO_CWV[which(data$day_type == "Week day")], 
+    data$NO_DM[which(data$day_type == "Week day")])
+cor(data$NO_CWV[which(data$day_type == "Week day")], 
+    data$NO_DM[which(data$day_type == "Week day")], method = "kendall")
+cor(data$NO_CWV[which(data$day_type == "Week day")], 
+    data$NO_DM[which(data$day_type == "Week day")], method = "spearman")
+cor(data$NO_CWV[which(data$day_type == "Weekend")], 
+    data$NO_DM[which(data$day_type == "Weekend")])
+cor(data$NO_CWV[which(data$day_type == "Weekend")], 
+    data$NO_DM[which(data$day_type == "Weekend")], method = "kendall")
+cor(data$NO_CWV[which(data$day_type == "Weekend")], 
+    data$NO_DM[which(data$day_type == "Weekend")], method = "spearman")
+
+## Correlations of "day type" for the North East
+cor(data$NE_CWV[which(data$day_type == "Bank holiday")], 
+    data$NE_DM[which(data$day_type == "Bank holiday")])
+cor(data$NE_CWV[which(data$day_type == "Bank holiday")], 
+    data$NE_DM[which(data$day_type == "Bank holiday")], method = "kendall")
+cor(data$NE_CWV[which(data$day_type == "Bank holiday")], 
+    data$NE_DM[which(data$day_type == "Bank holiday")], method = "spearman")
+cor(data$NE_CWV[which(data$day_type == "Week day")], 
+    data$NE_DM[which(data$day_type == "Week day")])
+cor(data$NE_CWV[which(data$day_type == "Week day")], 
+    data$NE_DM[which(data$day_type == "Week day")], method = "kendall")
+cor(data$NE_CWV[which(data$day_type == "Week day")], 
+    data$NE_DM[which(data$day_type == "Week day")], method = "spearman")
+cor(data$NE_CWV[which(data$day_type == "Weekend")], 
+    data$NE_DM[which(data$day_type == "Weekend")])
+cor(data$NE_CWV[which(data$day_type == "Weekend")], 
+    data$NE_DM[which(data$day_type == "Weekend")], method = "kendall")
+cor(data$NE_CWV[which(data$day_type == "Weekend")], 
+    data$NE_DM[which(data$day_type == "Weekend")], method = "spearman")
 
 ## Extract the dates
 index = dmy(data$Date)
