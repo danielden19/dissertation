@@ -5,6 +5,7 @@ install.packages("lubridate")
 library(lubridate)
 library(ggplot2)
 library(tidyr)
+library(dplyr)
 ## Check lubridate is working
 dmy(data$Date[1])
 ## Find the NA values in the data and remove
@@ -20,6 +21,16 @@ data[3103,]
 data = na.omit(data)
 which(duplicated(data$Date))
 ## No duplicated dates in the data
+## Check negative values
+which(data$NO_CWV<0)
+which(data$NO_DM<0)
+which(data$NE_CWV<0)
+which(data$NE_DM<0)
+## Some values where the CWV is less than 0 in either region
+data[which(data$NO_CWV<0),]
+## All dates within November - March so likely just particularly bad winter weather
+data[which(data$NE_CWV<0),]
+## Again all dates fall within November - March
 ## Set the Date column in the correct format
 data$Date = dmy(data$Date)
 
@@ -42,8 +53,8 @@ ggplot(data = data) +
 ggplot(data = data) + geom_point(mapping = aes(x = NO_CWV, y = NE_CWV), size = 0.5)
 ggplot(data = data) + geom_point(mapping = aes(x = NO_DM, y = NE_DM), size = 0.5)
 ## Now within locations (NO and NE)
-ggplot(data = data) + geom_point(mapping = aes(x = NO_CWV, y = NO_DM), size = 0.5)
-ggplot(data = data) + geom_point(mapping = aes(x = NE_CWV, y = NE_DM), size = 0.5)
+ggplot(data = data) + geom_point(mapping = aes(x = NO_CWV, y = NO_DM), size = 0.4)
+ggplot(data = data) + geom_point(mapping = aes(x = NE_CWV, y = NE_DM), size = 0.4)
 
 ## Create some line plots of the data
 ggplot(data = data, mapping = aes(x = Date, y = NO_CWV)) + geom_line()
@@ -91,6 +102,29 @@ ggplot(data = data, mapping = aes(x = Date, y = NE_DM, colour = factor(Bank.Holi
                                       type = c("skyblue", "black")) + 
   theme(legend.title = element_blank(), legend.position = "bottom")
 
+## Change the black line to points for the bank holidays
+ggplot(data = data, mapping = aes(x = Date, y = NO_DM)) + 
+  geom_line(data = data[which(data$Bank.Holiday==FALSE),], aes(colour = factor(Bank.Holiday))) + 
+  geom_point(data = data[which(data$Bank.Holiday==TRUE),], aes(shape = factor(Bank.Holiday))) + 
+  theme(legend.position = "bottom") + 
+  labs(colour = "legend") + 
+  scale_colour_discrete(name = "", breaks = c("TRUE", "FALSE"), 
+                        labels = c("Bank holiday", "Non-bank holiday"),
+                        type = c("skyblue", "black")) +
+  scale_shape_discrete(name = "", breaks = c("TRUE", "FALSE"), 
+                        labels = c("Bank holiday", "Non-bank holiday"))
+
+ggplot(data = data, mapping = aes(x = Date, y = NE_DM)) + 
+  geom_line(data = data[which(data$Bank.Holiday==FALSE),], aes(colour = factor(Bank.Holiday))) + 
+  geom_point(data = data[which(data$Bank.Holiday==TRUE),], aes(shape = factor(Bank.Holiday))) + 
+  theme(legend.position = "bottom") + 
+  labs(colour = "legend") + 
+  scale_colour_discrete(name = "", breaks = c("TRUE", "FALSE"), 
+                        labels = c("Bank holiday", "Non-bank holiday"),
+                        type = c("skyblue", "black")) +
+  scale_shape_discrete(name = "", breaks = c("TRUE", "FALSE"), 
+                       labels = c("Bank holiday", "Non-bank holiday"))
+
 ## Box plots separating the bank holidays and non bank holidays
 ggplot(data = data) + 
   geom_boxplot(mapping = aes(x = Bank.Holiday, y = NO_CWV), fill = c("skyblue", "darkgrey")) + xlab("") +  
@@ -112,20 +146,20 @@ weekends_vector = sort(c(which(data$Day == "Saturday"), which(data$Day == "Sunda
 data$day_type = NA
 data$day_type[bank_hols_vector] = "Bank holiday"
 data$day_type[weekends_vector] = "Weekend"
-data$day_type = replace_na(data$day_type, "Week day")
+data$day_type = replace_na(data$day_type, "Weekday")
 
-## Now can separate into week days, weekends and bank holidays
+## Now can separate into weekdays, weekends and bank holidays
 ggplot(data = data) + geom_boxplot(mapping = aes(x = day_type, y = NO_DM),
                                    fill = c("darkgrey", "gold", "darkorange")) + xlab("")
 ggplot(data = data) + geom_boxplot(mapping = aes(x = day_type, y = NE_DM),
                                    fill = c("darkgrey", "gold", "darkorange")) + xlab("")
 
 ggplot(data = data, mapping = aes(x = Date, y = NO_DM, colour = factor(day_type))) + 
-  geom_line() + scale_colour_discrete(limits = c("Bank holiday", "Week day", "Weekend"),
+  geom_line() + scale_colour_discrete(limits = c("Bank holiday", "Weekday", "Weekend"),
                                       type = c("black", "gold", "darkorange")) + 
   theme(legend.title = element_blank(), legend.position = "bottom")
 ggplot(data = data, mapping = aes(x = Date, y = NE_DM, colour = factor(day_type))) + 
-  geom_line() + scale_colour_discrete(limits = c("Bank holiday", "Week day", "Weekend"),
+  geom_line() + scale_colour_discrete(limits = c("Bank holiday", "Weekday", "Weekend"),
                                       type = c("black", "gold", "darkorange")) + 
   theme(legend.title = element_blank(), legend.position = "bottom")
 
@@ -147,12 +181,12 @@ cor(data$NO_DM[which(data$day_type == "Bank holiday")],
     data$NE_DM[which(data$day_type == "Bank holiday")], method = "kendall")
 cor(data$NO_DM[which(data$day_type == "Bank holiday")], 
     data$NE_DM[which(data$day_type == "Bank holiday")], method = "spearman")
-cor(data$NO_DM[which(data$day_type == "Week day")], 
-    data$NE_DM[which(data$day_type == "Week day")])
-cor(data$NO_DM[which(data$day_type == "Week day")], 
-    data$NE_DM[which(data$day_type == "Week day")], method = "kendall")
-cor(data$NO_DM[which(data$day_type == "Week day")], 
-    data$NE_DM[which(data$day_type == "Week day")], method = "spearman")
+cor(data$NO_DM[which(data$day_type == "Weekday")], 
+    data$NE_DM[which(data$day_type == "Weekday")])
+cor(data$NO_DM[which(data$day_type == "Weekday")], 
+    data$NE_DM[which(data$day_type == "Weekday")], method = "kendall")
+cor(data$NO_DM[which(data$day_type == "Weekday")], 
+    data$NE_DM[which(data$day_type == "Weekday")], method = "spearman")
 cor(data$NO_DM[which(data$day_type == "Weekend")], 
     data$NE_DM[which(data$day_type == "Weekend")])
 cor(data$NO_DM[which(data$day_type == "Weekend")], 
@@ -167,17 +201,37 @@ cor(data$NO_CWV[which(data$day_type == "Bank holiday")],
     data$NO_DM[which(data$day_type == "Bank holiday")], method = "kendall")
 cor(data$NO_CWV[which(data$day_type == "Bank holiday")], 
     data$NO_DM[which(data$day_type == "Bank holiday")], method = "spearman")
-cor(data$NO_CWV[which(data$day_type == "Week day")], 
-    data$NO_DM[which(data$day_type == "Week day")])
-cor(data$NO_CWV[which(data$day_type == "Week day")], 
-    data$NO_DM[which(data$day_type == "Week day")], method = "kendall")
-cor(data$NO_CWV[which(data$day_type == "Week day")], 
-    data$NO_DM[which(data$day_type == "Week day")], method = "spearman")
+cor(data$NO_CWV[which(data$day_type == "Weekday")], 
+    data$NO_DM[which(data$day_type == "Weekday")])
+cor(data$NO_CWV[which(data$day_type == "Weekday")], 
+    data$NO_DM[which(data$day_type == "Weekday")], method = "kendall")
+cor(data$NO_CWV[which(data$day_type == "Weekday")], 
+    data$NO_DM[which(data$day_type == "Weekday")], method = "spearman")
 cor(data$NO_CWV[which(data$day_type == "Weekend")], 
     data$NO_DM[which(data$day_type == "Weekend")])
 cor(data$NO_CWV[which(data$day_type == "Weekend")], 
     data$NO_DM[which(data$day_type == "Weekend")], method = "kendall")
 cor(data$NO_CWV[which(data$day_type == "Weekend")], 
+    data$NO_DM[which(data$day_type == "Weekend")], method = "spearman")
+
+## Perform cor.test on these
+cor.test(data$NO_CWV[which(data$day_type == "Bank holiday")], 
+    data$NO_DM[which(data$day_type == "Bank holiday")])
+cor.test(data$NO_CWV[which(data$day_type == "Bank holiday")], 
+    data$NO_DM[which(data$day_type == "Bank holiday")], method = "kendall")
+cor.test(data$NO_CWV[which(data$day_type == "Bank holiday")], 
+    data$NO_DM[which(data$day_type == "Bank holiday")], method = "spearman")
+cor.test(data$NO_CWV[which(data$day_type == "Weekday")], 
+    data$NO_DM[which(data$day_type == "Weekday")])
+cor.test(data$NO_CWV[which(data$day_type == "Weekday")], 
+    data$NO_DM[which(data$day_type == "Weekday")], method = "kendall")
+cor.test(data$NO_CWV[which(data$day_type == "Weekday")], 
+    data$NO_DM[which(data$day_type == "Weekday")], method = "spearman")
+cor.test(data$NO_CWV[which(data$day_type == "Weekend")], 
+    data$NO_DM[which(data$day_type == "Weekend")])
+cor.test(data$NO_CWV[which(data$day_type == "Weekend")], 
+    data$NO_DM[which(data$day_type == "Weekend")], method = "kendall")
+cor.test(data$NO_CWV[which(data$day_type == "Weekend")], 
     data$NO_DM[which(data$day_type == "Weekend")], method = "spearman")
 
 ## Correlations of "day type" for the North East
@@ -187,18 +241,57 @@ cor(data$NE_CWV[which(data$day_type == "Bank holiday")],
     data$NE_DM[which(data$day_type == "Bank holiday")], method = "kendall")
 cor(data$NE_CWV[which(data$day_type == "Bank holiday")], 
     data$NE_DM[which(data$day_type == "Bank holiday")], method = "spearman")
-cor(data$NE_CWV[which(data$day_type == "Week day")], 
-    data$NE_DM[which(data$day_type == "Week day")])
-cor(data$NE_CWV[which(data$day_type == "Week day")], 
-    data$NE_DM[which(data$day_type == "Week day")], method = "kendall")
-cor(data$NE_CWV[which(data$day_type == "Week day")], 
-    data$NE_DM[which(data$day_type == "Week day")], method = "spearman")
+cor(data$NE_CWV[which(data$day_type == "Weekday")], 
+    data$NE_DM[which(data$day_type == "Weekday")])
+cor(data$NE_CWV[which(data$day_type == "Weekday")], 
+    data$NE_DM[which(data$day_type == "Weekday")], method = "kendall")
+cor(data$NE_CWV[which(data$day_type == "Weekday")], 
+    data$NE_DM[which(data$day_type == "Weekday")], method = "spearman")
 cor(data$NE_CWV[which(data$day_type == "Weekend")], 
     data$NE_DM[which(data$day_type == "Weekend")])
 cor(data$NE_CWV[which(data$day_type == "Weekend")], 
     data$NE_DM[which(data$day_type == "Weekend")], method = "kendall")
 cor(data$NE_CWV[which(data$day_type == "Weekend")], 
     data$NE_DM[which(data$day_type == "Weekend")], method = "spearman")
+
+## Perform cor.test on the above correlation coefficients
+cor.test(data$NE_CWV[which(data$day_type == "Bank holiday")], 
+    data$NE_DM[which(data$day_type == "Bank holiday")])
+cor.test(data$NE_CWV[which(data$day_type == "Bank holiday")], 
+    data$NE_DM[which(data$day_type == "Bank holiday")], method = "kendall")
+cor.test(data$NE_CWV[which(data$day_type == "Bank holiday")], 
+    data$NE_DM[which(data$day_type == "Bank holiday")], method = "spearman")
+cor.test(data$NE_CWV[which(data$day_type == "Weekday")], 
+    data$NE_DM[which(data$day_type == "Weekday")])
+cor.test(data$NE_CWV[which(data$day_type == "Weekday")], 
+    data$NE_DM[which(data$day_type == "Weekday")], method = "kendall")
+cor.test(data$NE_CWV[which(data$day_type == "Weekday")], 
+    data$NE_DM[which(data$day_type == "Weekday")], method = "spearman")
+cor.test(data$NE_CWV[which(data$day_type == "Weekend")], 
+    data$NE_DM[which(data$day_type == "Weekend")])
+cor.test(data$NE_CWV[which(data$day_type == "Weekend")], 
+    data$NE_DM[which(data$day_type == "Weekend")], method = "kendall")
+cor.test(data$NE_CWV[which(data$day_type == "Weekend")], 
+    data$NE_DM[which(data$day_type == "Weekend")], method = "spearman")
+
+
+## Plot the CSV and DM together
+ggplot(data = data, aes(x = Date)) + 
+  geom_line(mapping = aes(y = NO_DM, colour = "NO_DM")) + 
+  geom_line(mapping = aes(y = NO_CWV*2192.245, colour = "NO_CWV")) + 
+  scale_y_continuous(sec.axis = sec_axis(trans = ~./2192.245, name = "NO_CWV")) +
+  theme(legend.title = element_blank(), legend.position = "right") +
+  scale_color_manual(values = c("NO_CWV" = "darkgrey", "NO_DM" = "purple"))
+
+ggplot(data = data, aes(x = Date)) + 
+  geom_line(mapping = aes(y = NE_DM, color = "NE_DM")) + 
+  geom_line(mapping = aes(y = NE_CWV*2346.609, color = "NE_CWV")) + 
+  scale_y_continuous(sec.axis = sec_axis(trans = ~./2346.609, name = "NE_CWV")) +
+  theme(legend.title = element_blank(), legend.position = "right") +
+  scale_color_manual(values = c("NE_CWV" = "darkgrey", "NE_DM" = "purple"))
+
+data$NE_DM[1]/data$NE_CWV[1]
+data$NO_DM[1]/data$NO_CWV[1]
 
 ## Extract the dates
 index = dmy(data$Date)
