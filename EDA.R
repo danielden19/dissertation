@@ -2,10 +2,13 @@
 all_data = read.csv("data_for_daniel.csv", header = TRUE)
 data = all_data[,c(1,2,3,9,14,20)]
 install.packages("lubridate")
+install.packages("zoo")
 library(lubridate)
 library(ggplot2)
 library(tidyr)
+library(plyr)
 library(dplyr)
+library(zoo)
 ## Check lubridate is working
 dmy(data$Date[1])
 ## Find the NA values in the data and remove
@@ -55,6 +58,29 @@ ggplot(data = data) + geom_point(mapping = aes(x = NO_DM, y = NE_DM), size = 0.5
 ## Now within locations (NO and NE)
 ggplot(data = data) + geom_point(mapping = aes(x = NO_CWV, y = NO_DM), size = 0.4)
 ggplot(data = data) + geom_point(mapping = aes(x = NE_CWV, y = NE_DM), size = 0.4)
+
+## Perform K-means on these scatter plots (for DM)
+NO_data = data.frame(cbind(data$NO_DM, data$NO_CWV))
+colnames(NO_data) = c("NO_DM", "NO_CWV")
+km_NO = kmeans(NO_data, 4, iter.max = 50, nstart = 20)
+pca_km_NO = prcomp(x = NO_data)
+plot(pca_km_NO$x[,1], pca_km_NO$x[,2], col = km_NO$cluster, pch = km_NO$cluster)
+NO_data$cluster = km_NO$cluster
+ggplot() + 
+  geom_point(data = NO_data, 
+             mapping = aes(x = NO_CWV, y = NO_DM, colour = factor(cluster))) + 
+  scale_colour_brewer(name = "Cluster", palette = "RdGy")
+  
+NE_data = data.frame(cbind(data$NE_DM, data$NE_CWV))
+colnames(NE_data) = c("NE_DM", "NE_CWV")
+km_NE = kmeans(NE_data, 4, iter.max = 50, nstart = 20)
+pca_km_NE = prcomp(x = NE_data)
+plot(pca_km_NE$x[,1], pca_km_NE$x[,2], col = km_NE$cluster, pch = km_NE$cluster)
+NE_data$cluster = km_NE$cluster
+ggplot() + 
+  geom_point(data = NE_data, 
+             mapping = aes(x = NE_CWV, y = NE_DM, colour = factor(cluster))) + 
+  scale_colour_brewer(name = "Cluster", palette = "RdGy")
 
 ## Create some line plots of the data
 ggplot(data = data, mapping = aes(x = Date, y = NO_CWV)) + geom_line()
@@ -125,6 +151,12 @@ ggplot(data = data, mapping = aes(x = Date, y = NE_DM)) +
   scale_shape_discrete(name = "", breaks = c("TRUE", "FALSE"), 
                        labels = c("Bank holiday", "Non-bank holiday"))
 
+## Plot each year over the top of each other
+ggplot(data = data, aes(format(Date, format = "%m-%d"), NO_DM, group = factor(year(Date)),
+       colour = factor(year(Date)))) + geom_line()
+ggplot(data = data, aes(format(Date, format = "%m-%d"), NE_DM, group = factor(year(Date)),
+                        colour = factor(year(Date)))) + geom_line()
+
 ## Box plots separating the bank holidays and non bank holidays
 ggplot(data = data) + 
   geom_boxplot(mapping = aes(x = Bank.Holiday, y = NO_CWV), fill = c("skyblue", "darkgrey")) + xlab("") +  
@@ -165,14 +197,22 @@ ggplot(data = data, mapping = aes(x = Date, y = NE_DM, colour = factor(day_type)
 
 ## Look at correlation coefficients
 cor(data$NO_CWV, data$NO_DM)
-cor(data$NO_CWV, data$NO_DM, method = "kendall")
+#cor(data$NO_CWV, data$NO_DM, method = "kendall")
 cor(data$NO_CWV, data$NO_DM, method = "spearman")
 cor(data$NE_CWV, data$NE_DM)
-cor(data$NE_CWV, data$NE_DM, method = "kendall")
+#cor(data$NE_CWV, data$NE_DM, method = "kendall")
 cor(data$NE_CWV, data$NE_DM, method = "spearman")
 cor(data$NO_DM, data$NE_DM)
-cor(data$NO_DM, data$NE_DM, method = "kendall")
+#cor(data$NO_DM, data$NE_DM, method = "kendall")
 cor(data$NO_DM, data$NE_DM, method = "spearman")
+
+cor.test(data$NO_CWV, data$NO_DM)
+cor.test(data$NO_CWV, data$NO_DM, method = "spearman")
+cor.test(data$NE_CWV, data$NE_DM)
+cor.test(data$NE_CWV, data$NE_DM, method = "spearman")
+cor.test(data$NO_DM, data$NE_DM)
+cor.test(data$NO_DM, data$NE_DM, method = "spearman")
+
 
 ## More correlations based on "day type"
 cor(data$NO_DM[which(data$day_type == "Bank holiday")], 
@@ -292,11 +332,4 @@ ggplot(data = data, aes(x = Date)) +
 
 data$NE_DM[1]/data$NE_CWV[1]
 data$NO_DM[1]/data$NO_CWV[1]
-
-## Extract the dates
-index = dmy(data$Date)
-## Create a time series object - need to check for leap years because of frequency
-NO_CWV_ts = ts(data$NO_CWV, start = c(2008, as.numeric(format(inds[1], "%j"))),
-               frequency = 365)
-NO_CWV_ts
 
