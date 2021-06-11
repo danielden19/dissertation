@@ -52,6 +52,18 @@ ggplot(data = data) +
   geom_boxplot(mapping = aes(x = factor(Day, level = level_order), y = NE_DM)) + 
   xlab("")
 
+## Import the holiday dates
+holidays = read.csv("holidays.csv", header = TRUE)
+which(is.na(holidays))  ## No missing values
+bank_holidays = holidays[which(holidays$Bank.Holiday==TRUE),]
+## Need to change the date column for the data frame so they are in the same format
+bank_holidays$Date = ymd(bank_holidays$Date)
+bank_hols_data = match_df(data, bank_holidays)
+data = join(data, bank_holidays, by = "Date")
+data$Holiday = NULL
+data$Type = NULL
+data$Bank.Holiday = replace_na(data$Bank.Holiday,"FALSE")
+
 ## Line graphs showing demand with points over the top for bank holidays
 ggplot(data = data, mapping = aes(x = Date, y = NO_DM)) + 
   geom_line(data = data[which(data$Bank.Holiday==FALSE),], aes(colour = factor(Bank.Holiday)), lwd = 0.35) + 
@@ -126,17 +138,6 @@ ggplot() +
   geom_point(data = NE_data, 
              mapping = aes(x = NE_CWV, y = NE_DM, colour = factor(cluster))) + 
   scale_colour_brewer(name = "Cluster", palette = "RdGy")
-
-## Plot each year over the top of each other
-data$Day_of_year = yday(data$Date)
-ggplot(data = data, aes(Day_of_year, NO_DM, group = factor(year(Date)),
-                        colour = factor(year(Date)))) + geom_line() +
-  scale_colour_brewer(palette = "Paired", name = "Year") + 
-  xlab("Day of the year")
-ggplot(data = data, aes(Day_of_year, NE_DM, group = factor(year(Date)),
-                        colour = factor(year(Date)))) + geom_line() +
-  scale_colour_brewer(palette = "Paired", name = "Year") + 
-  xlab("Day of the year")
   
 ## Plot the CSV and DM together
 ggplot(data = data, aes(x = Date)) + 
@@ -169,9 +170,7 @@ cor.test(data$NO_DM, data$NE_DM)
 cor.test(data$NO_DM, data$NE_DM, method = "spearman")
 
 acf(data$NO_DM, lag.max = 40, main = "NO_DM acf")
-pacf(data$NO_DM, lag.max = 40)
 acf(data$NE_DM, lag.max = 40, main = "NE_DM acf")
-pacf(data$NE_DM, lag.max = 40)
 
 ## End of included EDA
 
@@ -422,33 +421,7 @@ ggplot(data = data, aes(x = Date)) +
 data$NE_DM[1]/data$NE_CWV[1]
 data$NO_DM[1]/data$NO_CWV[1]
 
-## Attempts to plot each year on one another
-ggplot(data = data, aes(format(Date, format = "%m-%d"), NO_DM, group = factor(year(Date)),
-                        colour = factor(year(Date)))) + geom_line() +
-  scale_color_brewer(palette = "Paired")
 
 # Nulled just to remove from the dataset
 data$M_D = NULL
 data$Year = NULL
-data$M_D = format(data$Date, format = "%B-%d")
-data$Year = year(data$Date)
-
-ggplot(data = data, aes(M_D, NO_DM, group = factor(Year),
-                        colour = factor(Year))) + geom_line() + 
-  scale_color_brewer(palette = "Paired") + 
-  scale_x_date(breaks = "1 month")
-
-ggplot(data = data, aes(format(Date, format = "%m-%d"), NE_DM, group = factor(year(Date)),
-                        colour = factor(year(Date)))) + geom_line() +
-  scale_colour_brewer(palette = "Paired")
-
-dat1 = data.frame(date = seq(as.Date("2008-01-01"), as.Date("2008-12-31"), "1 day"),
-                  value = data$NO_DM[which(data$Year==2008)])
-dat2 = data.frame(date = seq(as.Date("2009-01-01"), as.Date("2009-12-31"), "1 day"),
-                  value = data$NO_DM[which(data$Year==2009)])
-ggplot(rbind(dat1, dat2), aes(format(date, format = "%m-%d"), value,
-                              group = factor(year(date)), 
-                              colour = factor(year(date)))) +
-  geom_line() + 
-  scale_x_discrete(labels = c(labels = c("date" = "month(date)")))
-

@@ -1,0 +1,110 @@
+---
+title: "FCDs"
+author: "Daniel Dennis"
+date: "09/06/2021"
+header-includes:
+  -\usepackage{amsmath}
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include=FALSE}
+options(tinytex.verbose = TRUE)
+```
+
+
+$$p(\boldsymbol{y},\boldsymbol{s}|\mu_1,...,\mu_k,\sigma_1^2,...,\sigma^2_K,\xi)=p(\boldsymbol{y}|\boldsymbol{s},\mu_1,...,\mu_k,\sigma_1^2,...,\sigma^2_K)p(\boldsymbol{s}|\xi)$$
+where
+$$
+p(\boldsymbol{y}|\boldsymbol{s},\mu_1,...,\mu_k,\sigma_1^2,...,\sigma^2_K)=p(y_1|s_1=s_1,\mu_{s_1},\sigma^2_{s_1})\times p(y_2|s_2=s_2,\mu_{s_2},\sigma^2_{s_2})\times...\times p(y_T|s_T,\mu_{s_T},\sigma^2_{s_T})\\
+\begin{aligned}
+&=\prod^K_{k=1}\prod_{t:s_t=k}p(y_t|s_t=k,\mu_k,\sigma^2_k)\\
+&=\prod^K_{k=1}\prod_{t:s_t=k}\frac{1}{\sqrt{2\pi\sigma^2_k}}exp \left\{-\frac{1}{2\sigma^2_k}(y_t-\mu_k)^2\right\}\\
+&\propto\prod^K_{k=1}\sigma^{2\left(-\frac{N_k}{2}\right)}_k exp\left\{-\frac{1}{2\sigma^2_k}\sum_{t:s_t=k}(y_t-\mu_k)^2\right\}
+\end{aligned}
+$$
+where $N_k$ is the number of observations in state k.
+
+The full conditional distribution for $\mu_1,...,\mu_k$ is therefore:
+$$
+\pi(\mu_1,...,\mu_K|\boldsymbol{y},\boldsymbol{s},\sigma^2_1,...,\sigma^2_K,\xi)\propto p(\boldsymbol{y},\boldsymbol{s}|\mu_1,...,\mu_k,\sigma^2_1,...,\sigma^2_K,\xi) \pi(\mu_1,...,\mu_K)\\
+$$
+
+$$
+\begin{aligned}
+
+& =p(\boldsymbol{y}|\boldsymbol{s},\mu_1,...,\mu_k,\sigma^2_1,...,\sigma^2_K)p(\boldsymbol{s}|\xi)\pi(\mu_1,...,\mu_K)\\
+
+& \propto p(\boldsymbol{y}|\boldsymbol{s},\mu_1,...,\mu_k,\sigma^2_1,...,\sigma^2_K)\pi(\mu_1,...,\mu_K)\\
+
+& =p(\boldsymbol{y}|\boldsymbol{s},\mu_1,...,\mu_k,\sigma^2_1,...,\sigma^2_K)\times \prod^K_{k=1}\pi(\mu_k)\\
+
+\end{aligned}\\
+\begin{aligned}\\
+
+&\propto\prod^K_{k=1}\sigma_k^{2\left(-\frac{N_k}{2}\right)}exp\left\{-\frac{1}{2\sigma^2_k}\sum_{t:s_t=k}(y_t-\mu_k)^2\right\}\times\prod^K_{k=1}exp\left\{-\frac{1}{2v}(\mu_k-m)^2\right\}\\
+
+&\propto\prod^K_{k=1}exp\left\{-\frac{1}{2\sigma^2_k}\left(\sum_{t:s_t=k}(y_t^2-2y_t\mu_k+\mu_k^2)\right)-\frac{1}{2v}(\mu_k-m)^2\right\}\\
+
+&=\prod^K_{k=1}exp\left\{-\frac{1}{2\sigma^2_k}\left(\sum_{t:s_t=k}y_t^2-2\mu_k\sum_{t:s_t=k}y_t+\mu_k^2\sum_{t:s_t=k}1\right)-\frac{1}{2v}(\mu_k^2-2\mu_km+m^2)\right\}\\
+
+&=\prod^K_{k=1}exp\left\{-\frac{1}{2\sigma^2_k}\left(\sum_{t:s_t=k}y_t^2-2\mu_kN_k\bar{y}_k+N_k\mu_k^2\right)-\frac{1}{2v}(\mu_k^2-2\mu_km+m^2)\right\}\\
+
+&\propto\prod^K_{k=1}exp\left\{-\frac{1}{2\sigma^2_k}(-2\mu_kN_k\bar{y}_k+N_k\mu_k^2)-\frac{1}{2v}(\mu_k^2-2\mu_km)\right\}\\
+
+&=\prod^K_{k=1}exp\left\{-\frac{1}{2\sigma^2_kv}(v[-2\mu_kN_k\bar{y}_k+N_k\mu_k^2])+\sigma^2_k(\mu_k^2-2\mu_km)\right\}\\
+
+&=\prod^K_{k=1}exp\left\{-\frac{1}{2\sigma^2_kv}([vN_k+\sigma^2_k]\mu_k^2-2\mu_kN_k\bar{y}_kv-2\mu_km\sigma^2_k)\right\}\\
+
+&=\prod^K_{k=1}exp\left\{-\frac{1}{\frac{2\sigma^2_kv}{vN_k+\sigma^2_k}}\left[
+\mu_k^2-2\left(\frac{vN_k\bar{y}_k+\sigma^2_km}{vN_k+\sigma^2_k}\right)\mu_k\right]\right\}\\
+
+&=\prod^K_{k=1}exp\left\{-\frac{1}{\frac{2\sigma^2_kv}{vN_k+\sigma^2_k}}\left[
+\left(\mu_k-\frac{vN_k\bar{y}_k+\sigma^2_km}{vN_k+\sigma^2_k}\right)^2-\left(
+\frac{vN_k\bar{y}_k+\sigma^2_km}{vN_k+\sigma^2_k}
+\right)^2\right]\right\}\\
+
+&\propto\prod^K_{k=1}exp\left\{-\frac{vN_k+\sigma^2_k}{2\sigma^2_kv}\left[
+\left(\mu_k-\frac{vN_k\bar{y}_k+\sigma^2_km}{vN_k+\sigma^2_k}\right)^2\right]\right\}\\
+
+\end{aligned}
+$$
+So, because this factorises as a product of densities for $\mu_1,...,\mu_K$, the $\mu_k$ are independent in the full conditional distribution with
+$$\mu_k|\boldsymbol{y},\boldsymbol{s},\sigma^2_k,\xi\sim N\left(
+\frac{vN_k\bar{y}_k+\sigma^2_km}{vN_k+\sigma^2_k},\frac{\sigma^2_kv}{vN_k+\sigma^2_k}\right)$$
+
+where $\bar{y}_k=\frac{1}{N_k}\sum_{t:s_t=k}y_t$ for $k=1,...,K$.
+
+The full conditional distribution for $\sigma^2_1,...,\sigma^2_K$ is:
+
+$$
+\pi(\sigma^2_1,...,\sigma^2_K|\boldsymbol{y},\boldsymbol{s},\mu_1,...,\mu_K,\xi)\propto p(\boldsymbol{y},\boldsymbol{s}|\mu_1,...,\mu_k,\sigma^2_1,...,\sigma^2_K,\xi)\pi(\sigma^2_1,...,\sigma^2_K)\\
+
+\begin{aligned}
+
+& =p(\boldsymbol{y}|\boldsymbol{s},\mu_1,...,\mu_k,\sigma^2_1,...,\sigma^2_K)p(\boldsymbol{s}|\xi)\pi(\sigma^2_1,...,\sigma^2_K)\\
+
+& \propto p(\boldsymbol{y}|\boldsymbol{s},\mu_1,...,\mu_k,\sigma^2_1,...,\sigma^2_K)\pi(\sigma^2_1,...,\sigma^2_K)\\
+
+& =p(\boldsymbol{y}|\boldsymbol{s},\mu_1,...,\mu_k,\sigma^2_1,...,\sigma^2_K)\times \prod^K_{k=1}\pi(\sigma^2_k)\\
+
+\end{aligned}\\
+
+\begin{aligned}\\
+
+&=\prod^K_{k=1}\sigma_k^{2\left(-\frac{N_k}{2}\right)}exp\left\{-\frac{1}{2\sigma^2_k}\sum_{t:s_t=k}(y_t-\mu_k)^2\right\}\times
+\prod^K_{k=1}\frac{\beta}{\Gamma(\alpha)}\sigma^{2(-\alpha-1)}_kexp\left\{-\frac{\beta}{\sigma^2_k}\right\}\\
+
+&\propto\prod^K_{k=1}\sigma_k^{2\left(-\alpha-\frac{N_k}{2}-1\right)}exp\left\{-\frac{1}{2\sigma^2_k}\left(\sum_{t:s_t=k}(y_t-\mu_k)^2\right)-\frac{\beta}{\sigma^2_k}\right\}\\
+
+&=\prod^K_{k=1}\sigma_k^{2\left(-\alpha-\frac{N_k}{2}-1\right)}exp\left\{-\frac{1}{\sigma^2_k}\left(\beta+\sum_{t:s_t=k}\frac{(y_t-\mu_k)^2}{2}\right)\right\}\\
+\end{aligned}\\
+$$
+
+So, we can see that $\sigma^2_k$ is independent in its full conditional distributions and that
+$$
+\sigma^2_k|\boldsymbol{y},\boldsymbol{s},\mu_k,\xi\sim invgamma\left(\alpha+\frac{N_k}{2},\beta+\sum_{t:s_t=k}\frac{(y_t-\mu_k)^2}{2}\right)
+$$
