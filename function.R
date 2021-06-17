@@ -49,7 +49,6 @@ xi
 
 
 forward_filtering = function(y, K, S0_distribution, xi, mu, sigmasq){
-  #N = nrow(y)
   N = length(y)
   filtered_probs = matrix(nrow = N+1, ncol = K)
   filtered_probs[1,] = S0_distribution
@@ -76,3 +75,51 @@ forward_filtering = function(y, K, S0_distribution, xi, mu, sigmasq){
 
 sim
 forward_filtering(sim[[1]], 4, c(0.8, 0.05, 0.07, 0.08), xi, mu, sigma)
+
+sum(t(xi[,4])*c(0.9999888, 1.120317e-05, 1.029583e-24, 5.217612e-77))
+dnorm(1.2436575, mean = mu[1], sd = sqrt(sigma[1]))*0.8999904
+dnorm(0.3921794, mean = mu[2], sd = sqrt(sigma[2]))*0.01000941
+dnorm(1.2436575, mean = mu[3], sd = sqrt(sigma[3]))*0.0100
+dnorm(1.2436575, mean = mu[4], sd = sqrt(sigma[4]))*0.08000022
+
+c(dnorm(0.3921794, mean = mu[1], sd = sqrt(sigma[1]))*0.8999904,
+  dnorm(0.3921794, mean = mu[2], sd = sqrt(sigma[2]))*0.01000941,
+  dnorm(0.3921794, mean = mu[3], sd = sqrt(sigma[3]))*0.0100,
+  dnorm(0.3921794, mean = mu[4], sd = sqrt(sigma[4]))*0.08000022)/sum(c(dnorm(0.3921794, mean = mu[1], sd = sqrt(sigma[1]))*0.8999904,
+      dnorm(0.3921794, mean = mu[2], sd = sqrt(sigma[2]))*0.01000941,
+      dnorm(0.3921794, mean = mu[3], sd = sqrt(sigma[3]))*0.0100,
+      dnorm(0.3921794, mean = mu[4], sd = sqrt(sigma[4]))*0.08000022))
+
+
+forward_filtering_LSE = function(y, K, S0_distribution, xi, mu, sigmasq){
+  N = length(y)
+  filtered_probs = matrix(nrow = N+1, ncol = K)
+  filtered_probs[1,] = S0_distribution
+  one_step_ahead_forecasts = matrix(nrow = N, ncol = K)
+  numerator = numeric(K)
+  for (t in 1:N) {  # N is the maximum amount of time (=T)
+    # One step ahead prediction
+    for (l in 1:K) {  # K is the number of states
+      one_step_ahead_forecasts[t,l] = xi[1,l]*filtered_probs[t,1]
+      for (k in 2:K) {  # Here using k to iterate through the rows of xi
+        one_step_ahead_forecasts[t,l] = one_step_ahead_forecasts[t,l] + xi[k,l]*filtered_probs[t,k]
+        # k is step-ahead state, l is the current state??
+      } 
+    }
+    Ltmax = max(dnorm(y[1:t], mean = mu[1:K], sd = sqrt(sigmasq[1:K]), log = TRUE))
+    # Filtering
+    for (k in 1:K) {
+      numerator[k] = exp(dnorm(y[t], mean = mu[k], sd = sqrt(sigmasq[k]), log = TRUE)-Ltmax)*one_step_ahead_forecasts[t,k]
+    }
+    denominator = sum(numerator)
+    filtered_probs[t+1,] = numerator/denominator
+  }
+  return(list(one_step_ahead_forecasts, filtered_probs))
+}
+
+forward_filtering_LSE(sim[[1]], 4, c(0.8, 0.05, 0.07, 0.08), xi, mu, sigma)
+
+install.packages("DirichletReg")
+library(DirichletReg)
+## Coding up dirichlet:
+rdirichlet(K, alpha = xi[k,])
