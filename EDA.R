@@ -21,7 +21,11 @@ which(is.na(data$NO_DM))
 which(is.na(data$NE_CWV))
 which(is.na(data$NE_DM))
 data[3103,]
-data = na.omit(data)
+data[3100:3110,]
+## Clearly a mistake with this row so can be omitted since we do not lose any information
+data = data[-3103,]
+data[3103,]
+# data = na.omit(data)    This should probably not be included 
 which(duplicated(data$Date))
 ## No duplicated dates in the data
 ## Check negative values
@@ -58,11 +62,23 @@ which(is.na(holidays))  ## No missing values
 bank_holidays = holidays[which(holidays$Bank.Holiday==TRUE),]
 ## Need to change the date column for the data frame so they are in the same format
 bank_holidays$Date = ymd(bank_holidays$Date)
-bank_hols_data = match_df(data, bank_holidays)
+# bank_hols_data = match_df(data, bank_holidays)    Probably not needed
 data = join(data, bank_holidays, by = "Date")
 data$Holiday = NULL
 data$Type = NULL
 data$Bank.Holiday = replace_na(data$Bank.Holiday,"FALSE")
+data$Bank.Holiday.2 = as.integer(as.logical(data$Bank.Holiday))
+
+# Change to 0 or 1 for weekday/weekend
+data$Weekend = 0
+data$Weekend[which(data$Day=="Saturday"|data$Day=="Sunday")] = 1
+
+## Check no bank holidays fall on weekends
+which(data$Bank.Holiday.2==1&data$Day.2==1) # All fine here
+
+data$log_NO_DM = log(data$NO_DM)
+data$log_NE_DM = log(data$NE_DM)
+
 
 ## Line graphs showing demand with points over the top for bank holidays
 ggplot(data = data, mapping = aes(x = Date, y = NO_DM)) + 

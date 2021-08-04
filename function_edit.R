@@ -1,11 +1,3 @@
-## Function
-#y[i+1]  # Markov chain
-#xi      # Transition matrix
-#S0      # Initial distribution
-
-#install.packages("drat")
-#drat::addRepo("jr-packages")
-#install.packages("jrRstan")
 library(jrRstan)
 
 simulate_normal_hmm = function(xi, means, variances, length_seq, S0_distribution) {
@@ -61,7 +53,7 @@ forward_filtering = function(y, K, S0_distribution, xi, mu, sigmasq){
 }
 
 
-forward_filtering_LSE = function(y, K, S0_distribution, xi, mu, sigmasq){
+forward_filtering_LSE = function(y, K, S0_distribution, xi, beta, beta_tilde, x_tilde, sigmasq){
   ## Using the log-sum-exp trick
   N = length(y) # Find length of the series
   samples = y
@@ -79,11 +71,11 @@ forward_filtering_LSE = function(y, K, S0_distribution, xi, mu, sigmasq){
       } 
     }
     # Calculate Ltmax by finding the maximum value from a vector of normal samples
-    Ltmax = max(dnorm(samples[t], mean = mu[1:K], sd = sqrt(sigmasq[1:K]), log = TRUE))
+    Ltmax = max(dnorm(samples[t], mean = beta[1:K]+x_tilde[t,]%*%beta_tilde, sd = sqrt(sigmasq[1:K]), log = TRUE))
     # Filtering
-    for (m in 1:K) {
+    for (k in 1:K) {
       # Calculate values for the numerator by sampling the normal distribution and multiplying by the one-step-ahead forecasts
-      numerator[m] = exp(dnorm(samples[t], mean = mu[m], sd = sqrt(sigmasq[m]), log = TRUE)-Ltmax)*one_step_ahead_forecasts[t,m]
+      numerator[k] = exp(dnorm(samples[t], mean = beta[k]+x_tilde[t,]%*%beta_tilde, sd = sqrt(sigmasq[k]), log = TRUE)-Ltmax)*one_step_ahead_forecasts[t,k]
     }
     denominator = sum(numerator)
     filtered_probs[t+1,] = numerator/denominator  # Calculate the current row of the filtered probabilities
@@ -93,11 +85,11 @@ forward_filtering_LSE = function(y, K, S0_distribution, xi, mu, sigmasq){
 
 
 ## Backwards smoothing
-backwards_smoothing = function(y, K, S0_distribution, xi, mu, sigmasq){
+backwards_smoothing = function(y, K, S0_distribution, xi, mu, sigmasq, beta, beta_tilde, x_tilde){
   N = length(y)
   samples = y
   # Perform the forward filtering (with log-sum-exp trick) to give the filtered probabilities
-  filtering_function = forward_filtering_LSE(y, K, S0_distribution, xi, mu, sigmasq)
+  filtering_function = forward_filtering_LSE(y, K, S0_distribution, xi, mu, sigmasq, beta, beta_tilde, x_tilde)
   filtered_probs = filtering_function[[2]]
   smoothed_probs = matrix(nrow = N+1, ncol = K)  # Set up a matrix for the smoothed probabilities
   numerator = numeric(K)
@@ -120,11 +112,11 @@ backwards_smoothing = function(y, K, S0_distribution, xi, mu, sigmasq){
 }
 
 
-backwards_sampling = function(y, K, S0_distribution, xi, mu, sigmasq){
+backwards_sampling = function(y, K, S0_distribution, xi, mu, sigmasq, beta, beta_tilde, x_tilde){
   N = length(y)
   samples = y
   # Perform the forward filtering (with log-sum-exp trick)
-  filtering_function = forward_filtering_LSE(y, K, S0_distribution, xi, mu, sigmasq)
+  filtering_function = forward_filtering_LSE(y, K, S0_distribution, xi, beta, beta_tilde, x_tilde, sigmasq)
   filtered_probs = filtering_function[[2]]
   # Set up empty vectors for the smoothed states and numerator
   smoothed_states = numeric(N+1)
@@ -147,17 +139,23 @@ backwards_sampling = function(y, K, S0_distribution, xi, mu, sigmasq){
 library(MCMCpack)
 
 
-my_gibbs = function(niters, prior_mu, prior_sigmasq, prior_xi, y, K, S0_distribution) {
+my_gibbs = function(niters, prior_mu, prior_sigmasq, prior_xi, prior_beta_tilde, y, K, S0_distribution, beta, x_tilde) {
   ## Setting up storage
   N = length(y)
   ## Set up empty matrices for mu, sigmasq and xi samples
   mu_samples = matrix(NA, niters+1, K)
   sigmasq_samples = matrix(NA, niters+1, K)
   xi_samples = matrix(NA, niters+1, K*K)
+  beta_tilde_samples = matrix(NA, niters+1, 5)
+
   ## Initialise from prior
   mu = rnorm(K, prior_mu$m, sqrt(prior_mu$v))
   sigmasq = 1/rgamma(K, prior_sigmasq$a, prior_sigmasq$b)
   xi = matrix(0, K, K)
+  
+  # Make sure this is correct
+  beta_tilde = rmvnorm(1, prior_beta_tilde$m, prior_beta_tilde$v)
+  
   s_running_tally = matrix(0, nrow = N+1, ncol = K)
   ## Loop through K to initialise xi
   for(i in 1:K) {
@@ -167,6 +165,7 @@ my_gibbs = function(niters, prior_mu, prior_sigmasq, prior_xi, y, K, S0_distribu
   mu_samples[1,] = mu
   sigmasq_samples[1,] = sigmasq
   xi_samples[1,] = as.numeric(t(xi))
+  beta_tilde_samples[1,] = beta_tilde
   # Loop through the number of iterations
   for(iter in 1:niters) {
     # Sample from FCD of states given parameters
@@ -175,10 +174,12 @@ my_gibbs = function(niters, prior_mu, prior_sigmasq, prior_xi, y, K, S0_distribu
     mu = mu_FCD(prior_mu$m, prior_mu$v, y, s, sigmasq, K)
     sigmasq = sigmasq_FCD(prior_sigmasq$a, prior_sigmasq$b, y, s, mu, K)
     xi = xi_FCD(prior_xi, s)
+    beta_tilde = beta_tilde_FCD(y, prior_beta_tilde, x_tilde, sigmasq, beta, states, K)
     # Store
     mu_samples[1+iter,] = mu
     sigmasq_samples[1+iter,] = sigmasq
     xi_samples[1+iter,] = as.numeric(t(xi))
+    beta_tilde_samples[1+iter,] = beta_tilde
     # Tally the states, ie keep running total of number of times
     # time t is 1, 2, ..., K for each t
     for (t in 1:(N+1)) {
@@ -189,9 +190,10 @@ my_gibbs = function(niters, prior_mu, prior_sigmasq, prior_xi, y, K, S0_distribu
   colnames(mu_samples) = paste("mu[",1:K,"]", sep = "")
   colnames(sigmasq_samples) = paste("sigmasq[",1:K,"]", sep = "")
   colnames(xi_samples) = paste("xi[", rep(1:K, each = K),",", rep(1:K, times = K),"]", sep = "")
+  colnames(beta_tilde_samples) = paste("beta_tilde[", 1:K, "]", sep = "")
   # Calculate s_running_tally as a proportion rather than tally
   s_running_tally = s_running_tally / niters
-  return(list(mu_samples, sigmasq_samples, xi_samples, s_running_tally))
+  return(list(mu_samples, sigmasq_samples, xi_samples, beta_tilde_samples, s_running_tally))
 }
 
 
@@ -202,11 +204,13 @@ getmode = function(s_running_tally){
     # Find which value of K corresponds to the maximum value of each row
     mode_vector[i] = which.max(s_running_tally[i,])
   }
+## Probably not needed (below) ##
+  
   # Find which values are included in the mode vector
-  unique_values = unique(mode_vector)
+  # unique_values = unique(mode_vector)
   # Calculate the overall mode of the mode vector
-  mode = unique_values[which.max(tabulate(match(mode_vector, unique_values)))]
-  return(list(mode_vector, mode))
+  # mode = unique_values[which.max(tabulate(match(mode_vector, unique_values)))]
+  return(mode_vector)
 }
 
 
@@ -247,7 +251,7 @@ mu_FCD = function(m, v, y, states, sigmasq, K){
 
 
 # sigmasq_FCD function
-sigmasq_FCD = function(a, b, y, states, mu, K){
+sigmasq_FCD = function(a, b, y, states, beta, x_tilde, beta_tilde, K){
   values = sort(unique(states[-1]))
   samples = y
   # Set up necessary vectors
@@ -258,7 +262,8 @@ sigmasq_FCD = function(a, b, y, states, mu, K){
     # Find the vector locations of each state
     times = which(states[-1] == i)
     for (j in times) {
-      yt_minus_muk_sq[j] = (samples[j] - mu[i])^2
+      # Need to check t(beta_tilde) is correct
+      yt_minus_muk_sq[j] = (samples[j] - (beta[i]+x_tilde[j,]%*%t(beta_tilde)))^2
     }
     Nk = length(which(states[-1] == i))
     # Calculate values for sigmasq using the posterior from the FCD's
@@ -291,41 +296,27 @@ xi_FCD = function(xi_prior, states){
   return(updated_xi)
 }
 
-beta_tilde_vector = function(){}
+install.packages("mvtnorm")
+library(mvtnorm)
 
 
-
-
-
-
-Y_FCD = function(x, beta, sigmasq, states, K){
-  values = sort(unique(states[-1]))
-  # Does S need to be found via backwards sampling?
-  # Should x be found via the x_t_vector function instead?
-  N = length(x)
-  Y = matrix(0, nrow = N, ncol = K)
-  x_tilde = x[, -1:-K]
-  beta_tilde = beta[, -1:-K]
-  Y[1,] = mvrnorm(n = 1, mu = x[1]%*%beta, Sigma = sqrt(sigmasq[states[states[1]]]))
-  for (t in 2:N) {
-    Y[t,] = mvrnorm(n = 1, mu = beta[states[t]] + x_tilde[t,]%*%beta_tilde, 
-                    sigma = sqrt(sigmasq[states[states[t]]]))
+beta_tilde_FCD = function(y, beta_tilde_prior, x_tilde, sigmasq, beta, states, K){
+  N = length(y)
+  Z = y - beta[states[-1]]
+  updated_beta_tilde = numeric(5)
+  sum1 = matrix(0, 5, 5)
+  sum2 = numeric(5)
+  for (t in 1:N) {
+    sum1 = sum1 + x_tilde[t,]%*%t(x_tilde[t,])/sigmasq[states[t+1]]
+    sum2 = sum2 + x_tilde[t,]*Z[t]/sigmasq[states[t+1]]
   }
+  beta_tilde_mean = solve(1/beta_tilde_prior$v + sum1) %*% (1/beta_tilde_prior$v*beta_tilde_prior$m + sum2)
+  beta_tilde_sd = solve(1/beta_tilde_prior$v + sum1)
+  updated_beta_tilde = rmvnorm(1, mean = beta_tilde_mean, sigma = beta_tilde_sd)
+  # Finish calculation of mean and variance
+  return(updated_beta_tilde)
 }
 
-x_t_vector = function(S, length, w, b, K, data){
-  w = data$Weekend
-  b = data$Bank.Holiday.2
-  cwv = data$CWV
-  x_t = numeric(K+5)
-  for (t in 1:length) {
-    x_t[S[t]] = 1
-    x_t[K+1] = w[t]
-    x_t[K+2] = b[t]
-    x_t[K+3] = cwv[t]
-    x_t[K+4] = sin(2*pi*t/365.25)
-    x_t[K+5] = cos(2*pi*t/365.25) 
-  }
-}
+
 
 
